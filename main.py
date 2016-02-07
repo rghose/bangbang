@@ -7,10 +7,14 @@ from kivy.uix.widget import Widget
 from kivy.graphics import Rectangle
 from kivy.properties import NumericProperty
 from kivy.core.window import Window
+from kivy.properties import StringProperty
 
 from kivy.core.audio import SoundLoader,Sound
 
 from kivy.clock import Clock
+from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.image import Image
 
 #setup graphics
 from kivy.config import Config
@@ -18,12 +22,84 @@ Config.set('graphics','resizable',0)
 
 #Graphics fix
 from kivy.core.window import Window
-Window.clearcolor = (0.1,0.5,1,1.)
+
+Window.fullscreen = True
+Window.borderless = True
+Window.clearcolor = (0.2,0.5,0.5,0.5)
 
 bird_entry_times= [
     [250, 1000, 2000, 3000],
     [250, 1000, 2000, 3000, 4000, 6000]
 ]
+
+
+__NAME_OF_THE_GAME__ = "Bang Bang"
+__about_text__ = "Hello this is a mirage game. (C) Oshur Inc."
+
+__score_kill_bird__ = 1000
+__score_shoot_bullet__ = 1
+
+class MyButton(Button):
+    def __init__(self, **kwargs):
+        super(MyButton, self).__init__(**kwargs)
+        self.font_size = Window.width*0.018
+
+class SmartMenu(Widget):
+    buttonList = []
+
+    def __init__(self, **kwargs):
+        self.register_event_type('on_button_release') #creating a custom event called 'on_button_release' that will be used to pass information from the menu to the parent instance
+
+        super(SmartMenu, self).__init__(**kwargs)
+        self.layout = BoxLayout(orientation = 'vertical')
+        self.layout.width = Window.width/2
+        self.layout.height = Window.height/2
+        self.layout.x = Window.width/2 - self.layout.width/2
+        self.layout.y = Window.height/2 - self.layout.height/2
+        self.add_widget(self.layout)
+
+    def on_button_release(self, *args):
+        #don't need to do anything here. needed for dispatch
+        pass
+
+    def callback(self,instance):
+        self.buttonText = instance.text
+        self.dispatch('on_button_release')
+
+    def addButtons(self):
+        for k in self.buttonList:
+            tmpBtn = MyButton(text = k)
+            tmpBtn.background_color = [.4, .4, .4, .4]
+            tmpBtn.bind(on_release = self.callback) #when the button is released the callback function is called
+            self.layout.add_widget(tmpBtn)
+
+    def buildUp(self):
+        self.addButtons()
+
+# The menu
+class SmartStartMenu(SmartMenu):
+
+    buttonList = ['start', 'about']
+
+    def __init__(self, **kwargs):
+        super(SmartStartMenu, self).__init__(**kwargs)
+        self.layout = BoxLayout(orientation = 'vertical')
+        self.layout.width = Window.width/2
+        self.layout.height = Window.height/2
+        self.layout.x = Window.width/2 - self.layout.width/2
+        self.layout.y = Window.height/2 - self.layout.height/2
+        self.add_widget(self.layout)
+
+        self.msg = Label(text = __NAME_OF_THE_GAME__)
+        self.msg.font_size = Window.width*0.07
+        self.msg.pos = (Window.width*0.45,Window.height*0.75)
+        self.add_widget(self.msg)
+        self.img = Image(source = './images/menu.jpg')
+        self.img.size = (Window.width*1,Window.height*1)
+        self.img.pos = (0,0)
+        self.img.opacity = 0.45
+        self.add_widget(self.img)
+
 
 class WidgetDrawer(Widget):
     def __init__(self, imageStr, **kwargs):
@@ -96,6 +172,8 @@ class Explosion(WidgetDrawer):
 
 class GUI(Widget):
 
+    current_score = 0
+
     explosion_widget = None
     remove_explosion_widget = -1
 
@@ -131,6 +209,11 @@ class GUI(Widget):
         self.explosion_widget = Explosion(imageStr='./images/explosion.gif')
         self.explosion_sound = SoundLoader.load('./sounds/explosion.wav')
 
+        self.highScoreLabel = Label(text='Score: 0')
+        self.highScoreLabel.x = Window.width/2 - self.highScoreLabel.width/2
+        self.highScoreLabel.y = Window.height * 0.7
+        self.add_widget(self.highScoreLabel)
+
         l = Label(text='Bang Bang!')
         l.x = Window.width/2 - l.width/2
         l.y = Window.height * 0.85
@@ -154,6 +237,8 @@ class GUI(Widget):
             bullet.y = self.shooter.y + (self.shooter.myheight)
             self.add_widget(bullet)
             self.bullets.append(bullet)
+            self.current_score -= __score_shoot_bullet__
+            self.highScoreLabel.text = "Score: "+str(self.current_score)
             #print "after:", self.bullets
         elif touch.x > self.shooter.x:
             self.shooter.velocity_x = 1
@@ -204,6 +289,10 @@ class GUI(Widget):
                     self.birds.remove(b)
                     self.remove_explosion_widget = 30
                     self.play_sound()
+                    # Update score
+                    self.current_score += __score_kill_bird__
+                    self.highScoreLabel.text = "Score: "+ str(self.current_score)
+
 
             b.update()
             if b.x > Window.width*0.95:
@@ -226,8 +315,33 @@ class GUI(Widget):
 
 class ClientApp(App):
     def build(self):
-        app = GUI()
-        Clock.schedule_interval(app.update, 1.0/60.0)
-        return app
+        self.parent = Widget() #this is an empty holder for buttons, etc
+        self.app = GUI()
+        self.sm = SmartStartMenu()
+        self.sm.buildUp()
+
+        # Nested function...
+        def check_button(obj):
+            if self.sm.buttonText == 'start':
+                #remove menu and optional about text
+                try:
+                    self.parent.remove_widget(self.aboutText)
+                except:
+                    pass
+                self.parent.remove_widget(self.sm)
+                print (' we should start the game now')
+                Window.clearcolor = (0.1,0.5,1,1.)
+                self.parent.add_widget(self.app)
+                Clock.unschedule(self.app.update)
+                Clock.schedule_interval(self.app.update, 1.0/60.0)
+
+            if self.sm.buttonText == 'about':
+                self.aboutText = Label(text = __about_text__)
+                self.aboutText.pos = (Window.width*0.45,Window.height*0.15)
+                self.parent.add_widget(self.aboutText)
+
+        self.sm.bind(on_button_release = check_button)
+        self.parent.add_widget(self.sm)
+        return self.parent
 
 ClientApp().run()
