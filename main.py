@@ -28,6 +28,7 @@ Window.borderless = True
 Window.clearcolor = (0.2,0.5,0.5,0.5)
 
 bird_entry_times= [
+    [250],
     [250, 1000, 2000, 3000],
     [250, 1000, 2000, 3000, 4000, 6000]
 ]
@@ -36,7 +37,8 @@ bird_entry_times= [
 __NAME_OF_THE_GAME__ = "Bang Bang"
 __about_text__ = "Hello this is a mirage game. (C) Oshur Inc."
 
-__score_kill_bird__ = 1000
+__score_level_up__ = 1000
+__score_kill_bird__ = 100
 __score_shoot_bullet__ = 1
 
 class MyButton(Button):
@@ -59,7 +61,6 @@ class SmartMenu(Widget):
         self.add_widget(self.layout)
 
     def on_button_release(self, *args):
-        #don't need to do anything here. needed for dispatch
         pass
 
     def callback(self,instance):
@@ -70,7 +71,7 @@ class SmartMenu(Widget):
         for k in self.buttonList:
             tmpBtn = MyButton(text = k)
             tmpBtn.background_color = [.4, .4, .4, .4]
-            tmpBtn.bind(on_release = self.callback) #when the button is released the callback function is called
+            tmpBtn.bind(on_release = self.callback)
             self.layout.add_widget(tmpBtn)
 
     def buildUp(self):
@@ -94,7 +95,7 @@ class SmartStartMenu(SmartMenu):
         self.msg.font_size = Window.width*0.07
         self.msg.pos = (Window.width*0.45,Window.height*0.75)
         self.add_widget(self.msg)
-        self.img = Image(source = './images/menu.jpg')
+        self.img = Image(source = './images/hunt.jpg')
         self.img.size = (Window.width*1,Window.height*1)
         self.img.pos = (0,0)
         self.img.opacity = 0.45
@@ -131,9 +132,19 @@ class Water(WidgetDrawer):
     def update(self):
         pass
 
+# This is a bird shit
+class BirdShit(WidgetDrawer):
+    velocity_y = -1
+    mylength = NumericProperty(2)
+    myheight = NumericProperty(2)
+    def move(self):
+        self.y = self.y + self.velocity_y
+    def update(self):
+        self.move()
+
 # This draws the bird.
 class Bird(WidgetDrawer):
-    all_d_shitz = []
+    #all_d_shitz = [] # Do we need to track the shitz of each bird? No.
     velocity_x = 1
     mylength = NumericProperty(20)
     myheight = NumericProperty(20)
@@ -211,13 +222,9 @@ class GUI(Widget):
 
         self.highScoreLabel = Label(text='Score: 0')
         self.highScoreLabel.x = Window.width/2 - self.highScoreLabel.width/2
-        self.highScoreLabel.y = Window.height * 0.7
+        self.highScoreLabel.y = Window.height * 0.85
+        self.highScoreLabel.halign = 'center'
         self.add_widget(self.highScoreLabel)
-
-        l = Label(text='Bang Bang!')
-        l.x = Window.width/2 - l.width/2
-        l.y = Window.height * 0.85
-        self.add_widget(l)
 
         self.shooter = Shooter(imageStr = './images/shooter.png')
         self.shooter.x = Window.width*0.25
@@ -238,7 +245,7 @@ class GUI(Widget):
             self.add_widget(bullet)
             self.bullets.append(bullet)
             self.current_score -= __score_shoot_bullet__
-            self.highScoreLabel.text = "Score: "+str(self.current_score)
+            self.highScoreLabel.text = "Level: "+str(self.current_level)+"\nScore: "+str(self.current_score)
             #print "after:", self.bullets
         elif touch.x > self.shooter.x:
             self.shooter.velocity_x = 1
@@ -249,14 +256,17 @@ class GUI(Widget):
     def update(self,dt):
         self.current_counter += 1
 
-        if self.change_level_flag == True:
-            print(self.change_level)
+        if self.change_level_flag == True and len(self.birds) == 0:
+            print("Change level from ",self.current_level)
             self.current_level += 1
+            self.current_counter = 1
             self.change_level_flag = False
+            self.current_score += __score_level_up__
+            self.highScoreLabel.text = "Level: "+str(self.current_level)+"\nScore: "+str(self.current_score)
 
         # Load level data... (on level change)
         if self.current_counter <= 1:
-            self.bird_entry = bird_entry_times[self.current_level]
+            self.bird_entry = bird_entry_times[self.current_level-1]
 
         # All loading done... (remove unwanted widgets)
         if self.remove_explosion_widget == 0:
@@ -265,6 +275,7 @@ class GUI(Widget):
         elif self.remove_explosion_widget > 0:
             self.remove_explosion_widget-=1
 
+        # Check if bird is scheduled for now...
         if self.bird_entry.count(self.current_counter) > 0:
             self.bird_entry.remove(self.current_counter)
             bird = Bird(imageStr='./images/bird.jpg')
@@ -291,9 +302,7 @@ class GUI(Widget):
                     self.play_sound()
                     # Update score
                     self.current_score += __score_kill_bird__
-                    self.highScoreLabel.text = "Score: "+ str(self.current_score)
-
-
+                    self.highScoreLabel.text = "Level: "+str(self.current_level)+"\nScore: "+str(self.current_score)
             b.update()
             if b.x > Window.width*0.95:
                 print("Removed bird")
