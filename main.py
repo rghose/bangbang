@@ -23,7 +23,14 @@ Config.set('graphics','resizable',0)
 #Graphics fix
 from kivy.core.window import Window
 
+
+SIZE_RELATIVE = "rel"
+SIZE_ABSOLUTE = "abs"
+
+FRAMES_PER_SECOND = 60.0
+
 Window.fullscreen = True
+#Window.size = [480, 640]
 Window.borderless = True
 Window.clearcolor = (0.2,0.5,0.5,0.5)
 
@@ -54,8 +61,8 @@ class SmartMenu(Widget):
 
         super(SmartMenu, self).__init__(**kwargs)
         self.layout = BoxLayout(orientation = 'vertical')
-        self.layout.width = Window.width/2
-        self.layout.height = Window.height/2
+        self.layout.width = Window.width
+        self.layout.height = Window.height
         self.layout.x = Window.width/2 - self.layout.width/2
         self.layout.y = Window.height/2 - self.layout.height/2
         self.add_widget(self.layout)
@@ -84,7 +91,11 @@ class SmartStartMenu(SmartMenu):
 
     def __init__(self, **kwargs):
         super(SmartStartMenu, self).__init__(**kwargs)
+        self.size = (Window.width, Window.height)
+        print("Start menu:",self.size, self.size_hint)
+
         self.layout = BoxLayout(orientation = 'vertical')
+        #self.layout.size_hint = (0.6,0.6)
         self.layout.width = Window.width/2
         self.layout.height = Window.height/2
         self.layout.x = Window.width/2 - self.layout.width/2
@@ -96,22 +107,32 @@ class SmartStartMenu(SmartMenu):
         self.msg.pos = (Window.width*0.45,Window.height*0.75)
         self.add_widget(self.msg)
         self.img = Image(source = './images/hunt.jpg')
-        self.img.size = (Window.width*1,Window.height*1)
+        self.img.size = (Window.width,Window.height)
+        self.img.allow_stretch = True
+        self.img.keep_ratio = False
         self.img.pos = (0,0)
         self.img.opacity = 0.45
         self.add_widget(self.img)
+
+    def setSize(self,width, height):
+        self.size = (width, height)
 
 
 class WidgetDrawer(Widget):
     def __init__(self, imageStr, **kwargs):
         super(WidgetDrawer, self).__init__(**kwargs)
         with self.canvas:
-            self.size = (Window.width*.002* self.mylength,Window.height*.002* self.myheight)
+            if self.size_type == SIZE_RELATIVE:
+                self.size = (Window.width*self.mywidth ,Window.height*self.myheight)
+            elif self.size_type == SIZE_ABSOLUTE:
+                self.size = (self.mywidth, self.myheight)
+            else:
+                self.size = (Window.width*.002* self.mywidth,Window.height*.002* self.myheight)
             self.rect_bg=Rectangle(source=imageStr,pos=self.pos,size = self.size)
             self.bind(pos=self.update_graphics_pos)
             self.x = self.center_x
             self.y = self.center_y
-            self.pos = (self.x,self.y)
+            self.pos = (self.x - self.width,self.y)
             self.rect_bg.pos = self.pos
     def update_graphics_pos(self, instance, value):
         self.rect_bg.pos = value
@@ -123,8 +144,10 @@ class WidgetDrawer(Widget):
 
 
 class Water(WidgetDrawer):
-    mylength=NumericProperty(1/0.002)
-    myheight=NumericProperty(Window.height*(0.3))
+
+    size_type = SIZE_RELATIVE
+    mywidth=1
+    myheight=0.35
 
     def move(self):
         pass
@@ -135,7 +158,8 @@ class Water(WidgetDrawer):
 # This is a bird shit
 class BirdShit(WidgetDrawer):
     velocity_y = -1
-    mylength = NumericProperty(2)
+    size_type = SIZE_ABSOLUTE
+    mywidth = NumericProperty(2)
     myheight = NumericProperty(2)
     def move(self):
         self.y = self.y + self.velocity_y
@@ -146,7 +170,8 @@ class BirdShit(WidgetDrawer):
 class Bird(WidgetDrawer):
     #all_d_shitz = [] # Do we need to track the shitz of each bird? No.
     velocity_x = 1
-    mylength = NumericProperty(20)
+    size_type = SIZE_ABSOLUTE
+    mywidth = NumericProperty(40)
     myheight = NumericProperty(20)
     def move(self):
         self.x = self.x + self.velocity_x
@@ -155,7 +180,8 @@ class Bird(WidgetDrawer):
 
 class Bullet(WidgetDrawer):
     velocity_y = 1
-    mylength = NumericProperty(2)
+    size_type = SIZE_ABSOLUTE
+    mywidth = NumericProperty(2)
     myheight = NumericProperty(2)
     def move(self):
         self.y = self.y + self.velocity_y
@@ -165,21 +191,28 @@ class Bullet(WidgetDrawer):
 class Shooter(WidgetDrawer):
 
     velocity_x = 0
-    mylength = NumericProperty(40)
-    myheight = NumericProperty(25)
+    size_type = SIZE_ABSOLUTE
+    mywidth = NumericProperty(50)
+    myheight = NumericProperty(40)
 
     def move(self):
         self.x = self.x + self.velocity_x
-        if self.x+self.mylength > Window.width*0.95 or self.x < Window.width*0.02:
+        if self.x+self.mywidth > Window.width*0.95 or self.x < Window.width*0.02:
             self.velocity_x = 0
 
     def update(self):
         self.move()
 
 class Explosion(WidgetDrawer):
-    mylength = NumericProperty(50)
+    size_type = SIZE_ABSOLUTE
+    mywidth = NumericProperty(50)
     myheight = NumericProperty(50)
-    pass
+
+    def move(self):
+        pass
+
+    def update(self):
+        pass
 
 class GUI(Widget):
 
@@ -199,55 +232,63 @@ class GUI(Widget):
     # data...
     bird_entry = []
 
-    def play_sound(self):
+    def play_swipe_sound(self):
+        if self.swipe_sound == None:
+            self.swipe_sound = SoundLoader.load('./sounds/Swipe-Sound-Water.mp3')
+        self.swipe_sound.volume = 1
+        self.swipe_sound.play()
+
+    def stop_swipe_sound(self):
+        if self.swipe_sound == None:
+            return
+        self.swipe_sound.stop()
+
+
+    def play_explosion_sound(self):
         if self.explosion_sound == None:
             self.explosion_sound = SoundLoader.load('./sounds/explosion.wav')
             print(self.explosion_sound)
         self.explosion_sound.volume = 1
         self.explosion_sound.play()
-        print(self.explosion_sound.length)
 
-    def stop_sound(self):
+    def stop_explosion_sound(self):
         if self.explosion_sound == None:
-            self.explosion_sound = SoundLoader.load('./sounds/explosion.wav')
             return
         self.explosion_sound.stop()
 
     def __init__(self, **kwargs):
         super(GUI, self).__init__(**kwargs)
 
+        [self.window_width,self.window_height] = Window.size
+
         # Preload audio and images...
         self.explosion_widget = Explosion(imageStr='./images/explosion.gif')
         self.explosion_sound = SoundLoader.load('./sounds/explosion.wav')
+        self.swipe_sound = SoundLoader.load('./sounds/Swipe-Sound-Water.mp3')
 
         self.highScoreLabel = Label(text='Score: 0')
-        self.highScoreLabel.x = Window.width/2 - self.highScoreLabel.width/2
-        self.highScoreLabel.y = Window.height * 0.85
+        self.highScoreLabel.x = self.window_width/2 - self.highScoreLabel.width/2
+        self.highScoreLabel.y = self.window_height * 0.85
         self.highScoreLabel.halign = 'center'
         self.add_widget(self.highScoreLabel)
 
-        self.shooter = Shooter(imageStr = './images/shooter.png')
-        self.shooter.x = Window.width*0.25
-        self.shooter.y = Window.height*0.35
+        self.shooter = Shooter(imageStr = './images/hunter.png')
+        self.shooter.allow_stretch = True
+        self.shooter.keep_ratio = False
+        self.shooter.x = self.window_width*0.25
+        self.shooter.y = self.window_height*0.35
         self.add_widget(self.shooter)
 
-        self.water = Water(imageStr ='./images/water.jpg')
+        self.water = Water(imageStr ='./images/water.png')
+        self.water.allow_stretch = True
+        self.water.keep_ratio = False
         self.water.x = 0
         self.water.y = 0
         self.add_widget(self.water)
 
     def on_touch_down(self, touch):
-        if touch.y > self.shooter.y + 10:
-            #print "before:", self.bullets
-            bullet = Bullet(imageStr = './images/bullet.gif')
-            bullet.x = self.shooter.x + (self.shooter.mylength/2)
-            bullet.y = self.shooter.y + (self.shooter.myheight)
-            self.add_widget(bullet)
-            self.bullets.append(bullet)
-            self.current_score -= __score_shoot_bullet__
-            self.highScoreLabel.text = "Level: "+str(self.current_level)+"\nScore: "+str(self.current_score)
-            #print "after:", self.bullets
-        elif touch.x > self.shooter.x:
+        self.play_swipe_sound()
+        if touch.x > self.shooter.x:
             self.shooter.velocity_x = 1
         elif touch.x < self.shooter.x:
             self.shooter.velocity_x = -1
@@ -268,6 +309,14 @@ class GUI(Widget):
         if self.current_counter <= 1:
             self.bird_entry = bird_entry_times[self.current_level-1]
 
+        # Shoot every second.
+        if self.current_counter % FRAMES_PER_SECOND == 0:
+            bullet = Bullet(imageStr = './images/bullet.gif')
+            bullet.x = self.shooter.x + (self.shooter.mywidth/2)
+            bullet.y = self.shooter.y + (self.shooter.myheight)
+            self.add_widget(bullet)
+            self.bullets.append(bullet)
+
         # All loading done... (remove unwanted widgets)
         if self.remove_explosion_widget == 0:
             self.remove_widget(self.explosion_widget)
@@ -278,7 +327,7 @@ class GUI(Widget):
         # Check if bird is scheduled for now...
         if self.bird_entry.count(self.current_counter) > 0:
             self.bird_entry.remove(self.current_counter)
-            bird = Bird(imageStr='./images/bird.jpg')
+            bird = Bird(imageStr='./images/SeagullRight.png')
             bird.x = 50
             bird.y = Window.height * 0.9
             self.add_widget(bird)
@@ -289,7 +338,7 @@ class GUI(Widget):
         for b in self.birds:
             # Check if bird needs to be killed
             for bullet in self.bullets:
-                if (bullet.x > b.x and bullet.x < b.x + b.mylength) and (bullet.y > b.y and bullet.y < b.y+b.myheight):
+                if (bullet.x > b.x and bullet.x < b.x + b.mywidth) and (bullet.y > b.y and bullet.y < b.y+b.myheight):
                     self.remove_widget(b)
                     self.remove_widget(bullet)
                     print("Detected collision and hence removing:", bullet, b)
@@ -299,7 +348,7 @@ class GUI(Widget):
                     self.bullets.remove(bullet)
                     self.birds.remove(b)
                     self.remove_explosion_widget = 30
-                    self.play_sound()
+                    self.play_explosion_sound()
                     # Update score
                     self.current_score += __score_kill_bird__
                     self.highScoreLabel.text = "Level: "+str(self.current_level)+"\nScore: "+str(self.current_score)
@@ -339,10 +388,10 @@ class ClientApp(App):
                     pass
                 self.parent.remove_widget(self.sm)
                 print (' we should start the game now')
-                Window.clearcolor = (0.1,0.5,1,1.)
+                Window.clearcolor = (249/255, 198/255, 103/255,1.)
                 self.parent.add_widget(self.app)
                 Clock.unschedule(self.app.update)
-                Clock.schedule_interval(self.app.update, 1.0/60.0)
+                Clock.schedule_interval(self.app.update, 1.0/FRAMES_PER_SECOND)
 
             if self.sm.buttonText == 'about':
                 self.aboutText = Label(text = __about_text__)
