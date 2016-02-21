@@ -44,6 +44,8 @@ bird_entry_times= [
 __NAME_OF_THE_GAME__ = "Bang Bang"
 __about_text__ = "Hello this is a mirage game. (C) Oshur Inc."
 
+__color_window_bg__ = [249,198,103]
+
 __score_level_up__ = 1000
 __score_kill_bird__ = 100
 __score_shoot_bullet__ = 1
@@ -388,7 +390,7 @@ class ClientApp(App):
                     pass
                 self.parent.remove_widget(self.sm)
                 print (' we should start the game now')
-                Window.clearcolor = (249/255, 198/255, 103/255,1.)
+                Window.clearcolor = (__color_window_bg__[0]/255, __color_window_bg__[1]/255, __color_window_bg__[2]/255,1.)
                 self.parent.add_widget(self.app)
                 Clock.unschedule(self.app.update)
                 Clock.schedule_interval(self.app.update, 1.0/FRAMES_PER_SECOND)
