@@ -16,6 +16,9 @@ from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 
+from kivy.lang import Builder
+from kivy.uix.screenmanager import ScreenManager, Screen
+
 #setup graphics
 from kivy.config import Config
 Config.set('graphics','resizable',0)
@@ -32,7 +35,7 @@ FRAMES_PER_SECOND = 60.0
 Window.fullscreen = True
 #Window.size = [480, 640]
 Window.borderless = True
-Window.clearcolor = (0.2,0.5,0.5,0.5)
+Window.clearcolor = (0.7,0.65,0.6,0.2)
 
 bird_entry_times= [
     [250],
@@ -49,6 +52,12 @@ __color_window_bg__ = [249,198,103]
 __score_level_up__ = 1000
 __score_kill_bird__ = 100
 __score_shoot_bullet__ = 1
+
+class MenuScreen(Screen):
+    pass
+
+class AboutScreen(Screen):
+    pass
 
 class MyButton(Button):
     def __init__(self, **kwargs):
@@ -97,7 +106,6 @@ class SmartStartMenu(SmartMenu):
         print("Start menu:",self.size, self.size_hint)
 
         self.layout = BoxLayout(orientation = 'vertical')
-        #self.layout.size_hint = (0.6,0.6)
         self.layout.width = Window.width/2
         self.layout.height = Window.height/2
         self.layout.x = Window.width/2 - self.layout.width/2
@@ -106,19 +114,13 @@ class SmartStartMenu(SmartMenu):
 
         self.msg = Label(text = __NAME_OF_THE_GAME__)
         self.msg.font_size = Window.width*0.07
-        self.msg.pos = (Window.width*0.45,Window.height*0.75)
+        self.msg.pos = (Window.width/2 - self.msg.width/2,Window.height*0.8 - self.msg.height/2)
         self.add_widget(self.msg)
-        self.img = Image(source = './images/hunt.jpg')
-        self.img.size = (Window.width,Window.height)
-        self.img.allow_stretch = True
-        self.img.keep_ratio = False
-        self.img.pos = (0,0)
-        self.img.opacity = 0.45
-        self.add_widget(self.img)
+
+        SmartMenu.addButtons(self)
 
     def setSize(self,width, height):
         self.size = (width, height)
-
 
 class WidgetDrawer(Widget):
     def __init__(self, imageStr, **kwargs):
@@ -173,8 +175,8 @@ class Bird(WidgetDrawer):
     #all_d_shitz = [] # Do we need to track the shitz of each bird? No.
     velocity_x = 1
     size_type = SIZE_ABSOLUTE
-    mywidth = NumericProperty(40)
-    myheight = NumericProperty(20)
+    mywidth = 0.1*Window.width
+    myheight = 0.08*Window.height
     def move(self):
         self.x = self.x + self.velocity_x
     def update(self):
@@ -194,8 +196,8 @@ class Shooter(WidgetDrawer):
 
     velocity_x = 0
     size_type = SIZE_ABSOLUTE
-    mywidth = NumericProperty(50)
-    myheight = NumericProperty(40)
+    mywidth = 0.16*Window.width
+    myheight = 0.1*Window.height
 
     def move(self):
         self.x = self.x + self.velocity_x
@@ -248,7 +250,7 @@ class GUI(Widget):
 
     def play_explosion_sound(self):
         if self.explosion_sound == None:
-            self.explosion_sound = SoundLoader.load('./sounds/explosion.wav')
+            self.explosion_sound = SoundLoader.load('./sounds/Bird-Shot-Sound.mp3')
             print(self.explosion_sound)
         self.explosion_sound.volume = 1
         self.explosion_sound.play()
@@ -265,7 +267,7 @@ class GUI(Widget):
 
         # Preload audio and images...
         self.explosion_widget = Explosion(imageStr='./images/explosion.gif')
-        self.explosion_sound = SoundLoader.load('./sounds/explosion.wav')
+        self.explosion_sound = SoundLoader.load('./sounds/Bird-Shot-Sound.mp3')
         self.swipe_sound = SoundLoader.load('./sounds/Swipe-Sound-Water.mp3')
 
         self.highScoreLabel = Label(text='Score: 0')
@@ -373,35 +375,77 @@ class GUI(Widget):
         # Update shooter
         self.shooter.update()
 
-class ClientApp(App):
+class GameScreen(Screen):
+    def __init__(self, **kwargs):
+        super(GameScreen, self).__init__(**kwargs)
+
+    def update(self,dt):
+        print("update called")
+
+Builder.load_string("""
+#:import Clock kivy.clock.Clock
+<MenuScreen>:
+    name: "main_menu"
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: "Suck"
+        BoxLayout:
+            orientation: 'vertical'
+            Button:
+                pos_hint: {"right":1, "top":1}
+                text: "start"
+                on_release: app.root.current="game_screen"
+            Button:
+                pos_hint: {"right":1, "top":1}
+                text: "about"
+                on_release: app.root.current="about_screen"
+
+<AboutScreen>:
+    name: "about_screen"
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: app.GAME_COPYRIGHT_TEXT
+        Button:
+            size_hint: 1,0.2
+            pos_hint: {"right":1, "top":0.2}
+            text: "back"
+            on_release: app.root.current="main_menu"
+
+<GameScreen>:
+    name: "game_screen"
+    on_enter: Clock.schedule_interval(mygui.update, 1.0/app.FRAMES_PER_SECOND)
+    GUI:
+        id: mygui
+
+""")
+
+from kivy.base import EventLoop
+
+class TestApp(App):
+
+    FRAMES_PER_SECOND = 60
+
+    GAME_COPYRIGHT_TEXT = "This is a mirage game.\n\
+All Rights reserved\n\n\n\
+Feel free to contact me at hansum.rahul@gmail.com"
+
+    def hook_keyboard(self, window, key, *largs):
+        if key == 27:
+            print("Ask now")
+            return True
+
     def build(self):
-        self.parent = Widget() #this is an empty holder for buttons, etc
-        self.app = GUI()
-        self.sm = SmartStartMenu()
-        self.sm.buildUp()
+        #EventLoop.window.bind(on_keyboard=self.hook_keyboard)
 
-        # Nested function...
-        def check_button(obj):
-            if self.sm.buttonText == 'start':
-                #remove menu and optional about text
-                try:
-                    self.parent.remove_widget(self.aboutText)
-                except:
-                    pass
-                self.parent.remove_widget(self.sm)
-                print (' we should start the game now')
-                Window.clearcolor = (__color_window_bg__[0]/255, __color_window_bg__[1]/255, __color_window_bg__[2]/255,1.)
-                self.parent.add_widget(self.app)
-                Clock.unschedule(self.app.update)
-                Clock.schedule_interval(self.app.update, 1.0/FRAMES_PER_SECOND)
+        self.sm = ScreenManager()
+        self.sm.add_widget(MenuScreen(name='main_menu'))
+        self.sm.add_widget(AboutScreen(name='about_screen'))
+        self.sm.add_widget(GameScreen(name='game_screen'))
+        return self.sm
 
-            if self.sm.buttonText == 'about':
-                self.aboutText = Label(text = __about_text__)
-                self.aboutText.pos = (Window.width*0.45,Window.height*0.15)
-                self.parent.add_widget(self.aboutText)
+if __name__ == '__main__':
+    TestApp().run()
 
-        self.sm.bind(on_button_release = check_button)
-        self.parent.add_widget(self.sm)
-        return self.parent
-
-ClientApp().run()
+#ClientApp().run()
