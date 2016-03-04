@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = BangBang
+title = Man vs Seagull
 
 # (str) Package name
-package.name = bangbang
+package.name = manvseagull
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.mirage
