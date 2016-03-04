@@ -1,4 +1,4 @@
-__version__ = "0.1"
+__version__ = "0.2.1"
 from kivy.app import App
 
 from kivy.uix.label import Label
@@ -44,14 +44,12 @@ bird_entry_times= [
 ]
 
 
-__NAME_OF_THE_GAME__ = "Bang Bang"
-__about_text__ = "Hello this is a mirage game. (C) Oshur Inc."
+__NAME_OF_THE_GAME__ = "Man vs Seagulls"
 
 __color_window_bg__ = [249,198,103]
 
-__score_level_up__ = 1000
-__score_kill_bird__ = 100
-__score_shoot_bullet__ = 1
+__score_level_up__ = 10
+__score_kill_bird__ = 1
 
 class MenuScreen(Screen):
     pass
@@ -146,6 +144,17 @@ class WidgetDrawer(Widget):
         self.x = xpos
         self.y = ypos
 
+class HeartLife(WidgetDrawer):
+    size_type = SIZE_RELATIVE
+    mywidth=0.1
+    myheight=0.08
+
+    def move(self):
+        pass
+
+    def update(self):
+        pass
+
 
 class Water(WidgetDrawer):
 
@@ -163,8 +172,8 @@ class Water(WidgetDrawer):
 class BirdShit(WidgetDrawer):
     velocity_y = -1
     size_type = SIZE_ABSOLUTE
-    mywidth = NumericProperty(2)
-    myheight = NumericProperty(2)
+    mywidth = NumericProperty(10)
+    myheight = NumericProperty(20)
     def move(self):
         self.y = self.y + self.velocity_y
     def update(self):
@@ -173,6 +182,7 @@ class BirdShit(WidgetDrawer):
 # This draws the bird.
 class Bird(WidgetDrawer):
     #all_d_shitz = [] # Do we need to track the shitz of each bird? No.
+    has_shit = 0 # track the number of shitz by this birdy
     velocity_x = 1
     size_type = SIZE_ABSOLUTE
     mywidth = 0.1*Window.width
@@ -185,15 +195,14 @@ class Bird(WidgetDrawer):
 class Bullet(WidgetDrawer):
     velocity_y = 1
     size_type = SIZE_ABSOLUTE
-    mywidth = NumericProperty(2)
-    myheight = NumericProperty(2)
+    mywidth = NumericProperty(5)
+    myheight = NumericProperty(5)
     def move(self):
         self.y = self.y + self.velocity_y
     def update(self):
         self.move()
 
 class Shooter(WidgetDrawer):
-
     velocity_x = 0
     size_type = SIZE_ABSOLUTE
     mywidth = 0.16*Window.width
@@ -221,6 +230,7 @@ class Explosion(WidgetDrawer):
 class GUI(Widget):
 
     current_score = 0
+    current_lives = 3
 
     explosion_widget = None
     remove_explosion_widget = -1
@@ -232,6 +242,8 @@ class GUI(Widget):
     current_counter = 0
     bullets = []
     birds = []
+    shitz = []
+    hearts = []
 
     # data...
     bird_entry = []
@@ -265,16 +277,12 @@ class GUI(Widget):
 
         [self.window_width,self.window_height] = Window.size
 
+        self.current_lives = 3
+
         # Preload audio and images...
         self.explosion_widget = Explosion(imageStr='./images/explosion.gif')
         self.explosion_sound = SoundLoader.load('./sounds/Bird-Shot-Sound.mp3')
         self.swipe_sound = SoundLoader.load('./sounds/Swipe-Sound-Water.mp3')
-
-        self.highScoreLabel = Label(text='Score: 0')
-        self.highScoreLabel.x = self.window_width/2 - self.highScoreLabel.width/2
-        self.highScoreLabel.y = self.window_height * 0.85
-        self.highScoreLabel.halign = 'center'
-        self.add_widget(self.highScoreLabel)
 
         self.shooter = Shooter(imageStr = './images/hunter.png')
         self.shooter.allow_stretch = True
@@ -289,6 +297,41 @@ class GUI(Widget):
         self.water.x = 0
         self.water.y = 0
         self.add_widget(self.water)
+
+        self.highScoreLabel = Label(text='Score: 0')
+        self.highScoreLabel.width = self.window_width * 0.2
+        self.highScoreLabel.height = self.window_height * 0.05
+        self.highScoreLabel.x = self.window_width/2 - self.highScoreLabel.width/2
+        self.highScoreLabel.y = self.window_height * 0.85
+        self.highScoreLabel.halign = 'center'
+        self.highScoreLabel.font_name = "./fonts/KenPixelMiniSquare.ttf"
+        self.add_widget(self.highScoreLabel)
+
+        self.heart_life_1 = HeartLife(imageStr='./images/PixelHeart.png')
+        self.heart_life_1.allow_stretch = True
+        self.heart_life_1.keep_ratio = False
+        self.heart_life_1.x = self.window_width*0.65
+        self.heart_life_1.y = self.window_height*0.85
+        self.add_widget(self.heart_life_1)
+
+        self.heart_life_2 = HeartLife(imageStr='./images/PixelHeart.png')
+        self.heart_life_2.allow_stretch = True
+        self.heart_life_2.keep_ratio = False
+        self.heart_life_2.x = self.window_width*0.75
+        self.heart_life_2.y = self.window_height*0.85
+        self.add_widget(self.heart_life_2)
+
+        self.heart_life_3 = HeartLife(imageStr='./images/PixelHeart.png')
+        self.heart_life_3.allow_stretch = True
+        self.heart_life_3.keep_ratio = False
+        self.heart_life_3.x = self.window_width*0.85
+        self.heart_life_3.y = self.window_height*0.85
+        self.add_widget(self.heart_life_3)
+
+
+        self.hearts.append(self.heart_life_1)
+        self.hearts.append(self.heart_life_2)
+        self.hearts.append(self.heart_life_3)
 
     def on_touch_down(self, touch):
         self.play_swipe_sound()
@@ -315,6 +358,7 @@ class GUI(Widget):
 
         # Shoot every second.
         if self.current_counter % FRAMES_PER_SECOND == 0:
+            print(self.get_parent_window().sm)
             bullet = Bullet(imageStr = './images/bullet.gif')
             bullet.x = self.shooter.x + (self.shooter.mywidth/2)
             bullet.y = self.shooter.y + (self.shooter.myheight)
@@ -333,7 +377,7 @@ class GUI(Widget):
             self.bird_entry.remove(self.current_counter)
             bird = Bird(imageStr='./images/SeagullRight.png')
             bird.x = 50
-            bird.y = Window.height * 0.9
+            bird.y = Window.height * (0.6 + (random.random()*0.3))
             self.add_widget(bird)
             self.birds.append(bird)
             print("Adding bird")
@@ -348,7 +392,7 @@ class GUI(Widget):
                     print("Detected collision and hence removing:", bullet, b)
                     self.explosion_widget.x = bullet.x-20
                     self.explosion_widget.y= bullet.y-20
-                    self.add_widget(self.explosion_widget)
+                    #self.add_widget(self.explosion_widget)
                     self.bullets.remove(bullet)
                     self.birds.remove(b)
                     self.remove_explosion_widget = 30
@@ -357,6 +401,16 @@ class GUI(Widget):
                     self.current_score += __score_kill_bird__
                     self.highScoreLabel.text = "Level: "+str(self.current_level)+"\nScore: "+str(self.current_score)
             b.update()
+            # Add a shit... if we wanna
+            some_random_number = (random.random() * 10)
+            if 0 == b.has_shit and (some_random_number >= 5):
+                print("add shit")
+                s = BirdShit(imageStr='./images/poop.gif')
+                s.x = b.x
+                s.y = b.y
+                self.add_widget(s)
+                self.shitz.append(s)
+                b.has_shit = b.has_shit + 1
             if b.x > Window.width*0.95:
                 print("Removed bird")
                 self.remove_widget(b)
@@ -368,6 +422,25 @@ class GUI(Widget):
             if b.y > Window.height*0.95:
                 self.remove_widget(b)
                 self.bullets.remove(b)
+
+        # Update shitz and remove if not needed
+        for s in self.shitz:
+            if s.collide_widget(self.shooter):
+                self.current_lives = self.current_lives - 1
+                self.remove_widget(self.hearts[self.current_lives])
+                self.hearts.remove(self.hearts[self.current_lives])
+                if self.current_lives == 0: # game over
+                    print("game over")
+                    exit(0)
+                self.remove_widget(s)
+                self.shitz.remove(s)
+                next
+            if s.y < Window.height*0.35:
+                print("remove shitz", s.x, s.y)
+                self.remove_widget(s)
+                self.shitz.remove(s)
+                next
+            s.update()
 
         if len(self.bird_entry) == 0:
             self.change_level_flag = True
@@ -389,15 +462,28 @@ Builder.load_string("""
     BoxLayout:
         orientation: 'vertical'
         Label:
-            text: "Suck"
+            font_name: "./fonts/KenPixelMiniSquare.ttf"
+            text: "Man vs Seagull"
+            color: (0,0,0,1)
+            font_size: 35
+            size_hint: 1,0.5
         BoxLayout:
             orientation: 'vertical'
+            size_hint: 1,0.5
             Button:
-                pos_hint: {"right":1, "top":1}
+                font_name: "./fonts/KenPixelMiniSquare.ttf"
+                pos_hint: {"right":0.9, "top":0.7}
+                size_hint: 0.8,0.1
+                color: (0,0,0,1)
+                background_color: (0,0,0,0)
                 text: "start"
                 on_release: app.root.current="game_screen"
             Button:
-                pos_hint: {"right":1, "top":1}
+                font_name: "./fonts/KenPixelMiniSquare.ttf"
+                pos_hint: {"right":0.9, "top":0.5}
+                size_hint: 0.8,0.1
+                color: (0,0,0,1)
+                background_color: (0,0,0,0)
                 text: "about"
                 on_release: app.root.current="about_screen"
 
@@ -406,18 +492,23 @@ Builder.load_string("""
     BoxLayout:
         orientation: 'vertical'
         Label:
+            color: (0,0,0,1)
+            font_name: "./fonts/KenPixelMiniSquare.ttf"
             text: app.GAME_COPYRIGHT_TEXT
         Button:
+            font_name: "./fonts/KenPixelMiniSquare.ttf"
             size_hint: 1,0.2
-            pos_hint: {"right":1, "top":0.2}
+            pos_hint: {"right":1, "top":0.3}
             text: "back"
             on_release: app.root.current="main_menu"
 
 <GameScreen>:
     name: "game_screen"
     on_enter: Clock.schedule_interval(mygui.update, 1.0/app.FRAMES_PER_SECOND)
+    on_leave: Clock.unschedule(mygui.update)
     GUI:
         id: mygui
+        font_name: "./fonts/KenPixelMiniSquare.ttf"
 
 """)
 
@@ -433,16 +524,20 @@ Feel free to contact me at hansum.rahul@gmail.com"
 
     def hook_keyboard(self, window, key, *largs):
         if key == 27:
-            print("Ask now")
-            return True
+            if(self.sm.current=="game_screen"):
+                self.sm.current = "main_menu"
+                return True
+            return False
 
     def build(self):
-        #EventLoop.window.bind(on_keyboard=self.hook_keyboard)
+        EventLoop.window.bind(on_keyboard=self.hook_keyboard)
 
         self.sm = ScreenManager()
         self.sm.add_widget(MenuScreen(name='main_menu'))
         self.sm.add_widget(AboutScreen(name='about_screen'))
-        self.sm.add_widget(GameScreen(name='game_screen'))
+
+        self.game_screen_widget = GameScreen(name='game_screen')
+        self.sm.add_widget(self.game_screen_widget)
         return self.sm
 
 if __name__ == '__main__':
