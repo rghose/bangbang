@@ -26,6 +26,7 @@ Config.set('graphics','resizable',0)
 #Graphics fix
 from kivy.core.window import Window
 
+import random
 
 SIZE_RELATIVE = "rel"
 SIZE_ABSOLUTE = "abs"
@@ -33,9 +34,9 @@ SIZE_ABSOLUTE = "abs"
 FRAMES_PER_SECOND = 60.0
 
 Window.fullscreen = True
-#Window.size = [480, 640]
+#Window.size = [520, 800]
 Window.borderless = True
-Window.clearcolor = (0.7,0.65,0.6,0.2)
+Window.clearcolor = (255.0/255.0, 237.0/255.0, 192.0/255.0, 1)
 
 bird_entry_times= [
     [250],
@@ -228,7 +229,10 @@ class Explosion(WidgetDrawer):
         pass
 
 class GUI(Widget):
+    def __init__(self, **kwargs):
+        super(GUI, self).__init__(**kwargs)
 
+class GameScreen(Screen):
     current_score = 0
     current_lives = 3
 
@@ -273,8 +277,7 @@ class GUI(Widget):
         self.explosion_sound.stop()
 
     def __init__(self, **kwargs):
-        super(GUI, self).__init__(**kwargs)
-
+        super(GameScreen, self).__init__(**kwargs)
         [self.window_width,self.window_height] = Window.size
 
         self.current_lives = 3
@@ -339,8 +342,8 @@ class GUI(Widget):
             self.shooter.velocity_x = 1
         elif touch.x < self.shooter.x:
             self.shooter.velocity_x = -1
+        print("touched")
 
-    # This is the main function that gets updated with each interval
     def update(self,dt):
         self.current_counter += 1
 
@@ -358,7 +361,6 @@ class GUI(Widget):
 
         # Shoot every second.
         if self.current_counter % FRAMES_PER_SECOND == 0:
-            print(self.get_parent_window().sm)
             bullet = Bullet(imageStr = './images/bullet.gif')
             bullet.x = self.shooter.x + (self.shooter.mywidth/2)
             bullet.y = self.shooter.y + (self.shooter.myheight)
@@ -425,15 +427,15 @@ class GUI(Widget):
 
         # Update shitz and remove if not needed
         for s in self.shitz:
-            if s.collide_widget(self.shooter):
+            if (self.shooter.x > s.x and self.shooter.x < s.x + s.mywidth) and (self.shooter.y > s.y and self.shooter.y < s.y+s.myheight):
+                print("Hit with shitz", s.x, s.y, s.width, s.height, self.shooter.x, self.shooter.y, self.shooter.width, self.shooter.height)
                 self.current_lives = self.current_lives - 1
                 self.remove_widget(self.hearts[self.current_lives])
                 self.hearts.remove(self.hearts[self.current_lives])
-                if self.current_lives == 0: # game over
-                    print("game over")
-                    exit(0)
                 self.remove_widget(s)
                 self.shitz.remove(s)
+                if self.current_lives == 0: # game over
+                    self.manager.current = "main_menu"
                 next
             if s.y < Window.height*0.35:
                 print("remove shitz", s.x, s.y)
@@ -447,13 +449,6 @@ class GUI(Widget):
 
         # Update shooter
         self.shooter.update()
-
-class GameScreen(Screen):
-    def __init__(self, **kwargs):
-        super(GameScreen, self).__init__(**kwargs)
-
-    def update(self,dt):
-        print("update called")
 
 Builder.load_string("""
 #:import Clock kivy.clock.Clock
@@ -503,9 +498,10 @@ Builder.load_string("""
             on_release: app.root.current="main_menu"
 
 <GameScreen>:
+    id: gamescreen
     name: "game_screen"
-    on_enter: Clock.schedule_interval(mygui.update, 1.0/app.FRAMES_PER_SECOND)
-    on_leave: Clock.unschedule(mygui.update)
+    on_enter: Clock.schedule_interval(gamescreen.update, 1.0/app.FRAMES_PER_SECOND)
+    on_leave: Clock.unschedule(gamescreen.update)
     GUI:
         id: mygui
         font_name: "./fonts/KenPixelMiniSquare.ttf"
@@ -539,6 +535,7 @@ Feel free to contact me at hansum.rahul@gmail.com"
         self.game_screen_widget = GameScreen(name='game_screen')
         self.sm.add_widget(self.game_screen_widget)
         return self.sm
+
 
 if __name__ == '__main__':
     TestApp().run()
