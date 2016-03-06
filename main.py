@@ -427,7 +427,7 @@ class GameScreen(Screen):
 
         # Update shitz and remove if not needed
         for s in self.shitz:
-            if (self.shooter.x > s.x and self.shooter.x < s.x + s.mywidth) and (self.shooter.y > s.y and self.shooter.y < s.y+s.myheight):
+            if (s.x>self.shooter.x and s.x<self.shooter.x+self.shooter.mywidth) and (s.y>self.shooter.y and s.y<self.shooter.y+self.shooter.myheight):
                 print("Hit with shitz", s.x, s.y, s.width, s.height, self.shooter.x, self.shooter.y, self.shooter.width, self.shooter.height)
                 self.current_lives = self.current_lives - 1
                 self.remove_widget(self.hearts[self.current_lives])
@@ -461,26 +461,29 @@ Builder.load_string("""
             text: "Man vs Seagull"
             color: (0,0,0,1)
             font_size: 35
-            size_hint: 1,0.5
+            size_hint: 1,0.4
         BoxLayout:
             orientation: 'vertical'
-            size_hint: 1,0.5
+            size_hint: 1,0.6
             Button:
                 font_name: "./fonts/KenPixelMiniSquare.ttf"
-                pos_hint: {"right":0.9, "top":0.7}
-                size_hint: 0.8,0.1
+                pos_hint: {"right":0.9, "top":0.6}
+                size_hint: 0.8,0.15
                 color: (0,0,0,1)
                 background_color: (0,0,0,0)
                 text: "start"
                 on_release: app.root.current="game_screen"
             Button:
                 font_name: "./fonts/KenPixelMiniSquare.ttf"
-                pos_hint: {"right":0.9, "top":0.5}
-                size_hint: 0.8,0.1
+                pos_hint: {"right":0.9, "top":0.4}
+                size_hint: 0.8,0.15
                 color: (0,0,0,1)
                 background_color: (0,0,0,0)
                 text: "about"
                 on_release: app.root.current="about_screen"
+            Widget:
+                size_hint: 0.8, 0.7
+                background_color: (0,0.2,0.8,0.8)
 
 <AboutScreen>:
     name: "about_screen"
