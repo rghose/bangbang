@@ -44,7 +44,7 @@ requirements = kivy
 
 # (str) Presplash of the application
 #presplash.filename = %(source.dir)s/data/presplash.png
-presplash.filename = images/hunt.jpg
+presplash.filename = images/splash.jpg
 
 # (str) Icon of the application
 #icon.filename = %(source.dir)s/data/icon.png
