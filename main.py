@@ -39,11 +39,18 @@ Window.borderless = True
 Window.clearcolor = (255.0/255.0, 237.0/255.0, 192.0/255.0, 1)
 
 bird_entry_times= [
-    [250],
-    [250, 1000, 2000, 3000],
-    [250, 1000, 2000, 3000, 4000, 6000]
+    [200],
+    [250, 300, 350, 400, 450, 800, 900, 1000, 2000, 3000],
+    [250, 300, 350, 400, 450, 800, 900, 1000, 2000, 2100, 2200],
+    [100, 280, 320, 300, 350, 400, 450, 800, 900, 1000, 2000, 2100, 2200],
+    [250, 300, 350, 400, 400, 450, 500, 550, 600, 800, 900, 1000, 1200, 1800, 2000, 2100, 2200],
+    [250, 300, 350, 400, 400, 450, 500, 550, 600, 800, 900, 1000, 1200, 1400, 1600, 1800, 2000, 2100, 2200, 2330, 2500, 2600, 3000,],
+    [250, 300, 350, 400, 400, 450, 500, 550, 600, 800, 900, 1000, 2000, 1200, 1400, 1600, 1800, 2100, 2150, 2200, 2300, 2400, 2500, 2600, 2700, 2800],
+    [170, 200, 280, 300, 350, 390, 410, 440, 490, 510, 550, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1500, 1600, 1850, 2000, 2100, 2200, 2300, 2400, 2900, 3200, 3300],
 ]
 
+
+SEAGULL_IMAGE_PATHS = ['./images/SeagullRight.png', './images/SeagullLeft.png']
 
 __NAME_OF_THE_GAME__ = "Man vs Seagulls"
 
@@ -147,8 +154,8 @@ class WidgetDrawer(Widget):
 
 class HeartLife(WidgetDrawer):
     size_type = SIZE_RELATIVE
-    mywidth=0.1
-    myheight=0.08
+    mywidth=0.08
+    myheight=0.05
 
     def move(self):
         pass
@@ -161,7 +168,7 @@ class Water(WidgetDrawer):
 
     size_type = SIZE_RELATIVE
     mywidth=1
-    myheight=0.35
+    myheight=0.25
 
     def move(self):
         pass
@@ -173,7 +180,7 @@ class Water(WidgetDrawer):
 class BirdShit(WidgetDrawer):
     velocity_y = -1
     size_type = SIZE_ABSOLUTE
-    mywidth = NumericProperty(10)
+    mywidth = NumericProperty(15)
     myheight = NumericProperty(20)
     def move(self):
         self.y = self.y + self.velocity_y
@@ -205,14 +212,17 @@ class Bullet(WidgetDrawer):
 
 class Shooter(WidgetDrawer):
     velocity_x = 0
+    direction_x = 0
     size_type = SIZE_ABSOLUTE
     mywidth = 0.16*Window.width
     myheight = 0.1*Window.height
 
     def move(self):
-        self.x = self.x + self.velocity_x
-        if self.x+self.mywidth > Window.width*0.95 or self.x < Window.width*0.02:
-            self.velocity_x = 0
+        if self.velocity_x != 0:
+            self.x = self.x + (self.direction_x * self.velocity_x)
+            self.velocity_x = self.velocity_x - 1
+            if self.x+self.mywidth > Window.width*0.95 or self.x < Window.width*0.02:
+                self.velocity_x = 0
 
     def update(self):
         self.move()
@@ -276,9 +286,11 @@ class GameScreen(Screen):
             return
         self.explosion_sound.stop()
 
-    def __init__(self, **kwargs):
+    def __init__(self,app, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
         [self.window_width,self.window_height] = Window.size
+
+        self.app_ref = app
 
         self.current_lives = 3
 
@@ -291,7 +303,8 @@ class GameScreen(Screen):
         self.shooter.allow_stretch = True
         self.shooter.keep_ratio = False
         self.shooter.x = self.window_width*0.25
-        self.shooter.y = self.window_height*0.35
+        self.shooter.y = self.window_height*0.25
+        self.shooter.color= (1,1,1,0)
         self.add_widget(self.shooter)
 
         self.water = Water(imageStr ='./images/water.png')
@@ -299,6 +312,7 @@ class GameScreen(Screen):
         self.water.keep_ratio = False
         self.water.x = 0
         self.water.y = 0
+        self.water.color= (1,1,1,0)
         self.add_widget(self.water)
 
         self.highScoreLabel = Label(text='Score: 0')
@@ -307,30 +321,33 @@ class GameScreen(Screen):
         self.highScoreLabel.x = self.window_width/2 - self.highScoreLabel.width/2
         self.highScoreLabel.y = self.window_height * 0.85
         self.highScoreLabel.halign = 'center'
+        #self.highScoreLabel.color= (0,0,0,1)
         self.highScoreLabel.font_name = "./fonts/KenPixelMiniSquare.ttf"
         self.add_widget(self.highScoreLabel)
 
         self.heart_life_1 = HeartLife(imageStr='./images/PixelHeart.png')
         self.heart_life_1.allow_stretch = True
         self.heart_life_1.keep_ratio = False
-        self.heart_life_1.x = self.window_width*0.65
-        self.heart_life_1.y = self.window_height*0.85
+        self.heart_life_1.x = self.window_width*0.66
+        self.heart_life_1.y = self.window_height*0.9
+        self.heart_life_1.color = (0,0,0,0)
         self.add_widget(self.heart_life_1)
 
         self.heart_life_2 = HeartLife(imageStr='./images/PixelHeart.png')
         self.heart_life_2.allow_stretch = True
         self.heart_life_2.keep_ratio = False
         self.heart_life_2.x = self.window_width*0.75
-        self.heart_life_2.y = self.window_height*0.85
+        self.heart_life_2.y = self.window_height*0.9
+        self.heart_life_2.color = (0,0,0,0)
         self.add_widget(self.heart_life_2)
 
         self.heart_life_3 = HeartLife(imageStr='./images/PixelHeart.png')
         self.heart_life_3.allow_stretch = True
         self.heart_life_3.keep_ratio = False
-        self.heart_life_3.x = self.window_width*0.85
-        self.heart_life_3.y = self.window_height*0.85
+        self.heart_life_3.x = self.window_width*0.84
+        self.heart_life_3.y = self.window_height*0.9
+        self.heart_life_3.color = (0,0,0,0)
         self.add_widget(self.heart_life_3)
-
 
         self.hearts.append(self.heart_life_1)
         self.hearts.append(self.heart_life_2)
@@ -339,10 +356,11 @@ class GameScreen(Screen):
     def on_touch_down(self, touch):
         self.play_swipe_sound()
         if touch.x > self.shooter.x:
-            self.shooter.velocity_x = 1
+            self.shooter.velocity_x = 15
+            self.shooter.direction_x = 1
         elif touch.x < self.shooter.x:
-            self.shooter.velocity_x = -1
-        print("touched")
+            self.shooter.velocity_x = 15
+            self.shooter.direction_x = -1
 
     def update(self,dt):
         self.current_counter += 1
@@ -377,12 +395,13 @@ class GameScreen(Screen):
         # Check if bird is scheduled for now...
         if self.bird_entry.count(self.current_counter) > 0:
             self.bird_entry.remove(self.current_counter)
-            bird = Bird(imageStr='./images/SeagullRight.png')
-            bird.x = 50
-            bird.y = Window.height * (0.6 + (random.random()*0.3))
+            random_variable = int(random.random()*2)
+            bird = Bird(imageStr=SEAGULL_IMAGE_PATHS[random_variable])
+            bird.velocity_x = 1 - (random_variable * 2)
+            bird.x = 50+(random_variable * (self.window_width*0.85 - 100))
+            bird.y = Window.height * (0.5 + (random.random()*0.3))
             self.add_widget(bird)
             self.birds.append(bird)
-            print("Adding bird")
 
         # Update birds and remove if not needed
         for b in self.birds:
@@ -407,14 +426,13 @@ class GameScreen(Screen):
             some_random_number = (random.random() * 10)
             if 0 == b.has_shit and (some_random_number >= 5):
                 print("add shit")
-                s = BirdShit(imageStr='./images/poop.gif')
+                s = BirdShit(imageStr='./images/poop.jpg')
                 s.x = b.x
                 s.y = b.y
                 self.add_widget(s)
                 self.shitz.append(s)
                 b.has_shit = b.has_shit + 1
             if b.x > Window.width*0.95:
-                print("Removed bird")
                 self.remove_widget(b)
                 self.birds.remove(b)
 
@@ -428,17 +446,20 @@ class GameScreen(Screen):
         # Update shitz and remove if not needed
         for s in self.shitz:
             if (s.x>self.shooter.x and s.x<self.shooter.x+self.shooter.mywidth) and (s.y>self.shooter.y and s.y<self.shooter.y+self.shooter.myheight):
-                print("Hit with shitz", s.x, s.y, s.width, s.height, self.shooter.x, self.shooter.y, self.shooter.width, self.shooter.height)
                 self.current_lives = self.current_lives - 1
                 self.remove_widget(self.hearts[self.current_lives])
                 self.hearts.remove(self.hearts[self.current_lives])
                 self.remove_widget(s)
                 self.shitz.remove(s)
                 if self.current_lives == 0: # game over
+                    if self.app_ref.CURRENT_HIGH_SCORE < self.current_score: # update high score
+                        self.app_ref.CURRENT_HIGH_SCORE = self.current_score
+                        self.app_ref.CURRENT_HIGH_SCORE_TEXT = ("High Score: %d" % self.current_score)
+                        print(self.app_ref.CURRENT_HIGH_SCORE)
+
                     self.manager.current = "main_menu"
                 next
-            if s.y < Window.height*0.35:
-                print("remove shitz", s.x, s.y)
+            if s.y < Window.height*0.25:
                 self.remove_widget(s)
                 self.shitz.remove(s)
                 next
@@ -452,19 +473,34 @@ class GameScreen(Screen):
 
 Builder.load_string("""
 #:import Clock kivy.clock.Clock
+<GameScreen>:
+    id: gamescreen
+    name: "game_screen"
+    on_enter: Clock.schedule_interval(gamescreen.update, 1.0/app.FRAMES_PER_SECOND)
+    on_leave: Clock.unschedule(gamescreen.update)
+    GUI:
+        id: mygui
+        font_name: "./fonts/KenPixelMiniSquare.ttf"
+
 <MenuScreen>:
     name: "main_menu"
     BoxLayout:
         orientation: 'vertical'
         Label:
             font_name: "./fonts/KenPixelMiniSquare.ttf"
+            text: app.CURRENT_HIGH_SCORE_TEXT
+            color: (0,0,0,1)
+            font_size: 20
+            size_hint: 1,0.2
+        Label:
+            font_name: "./fonts/KenPixelMiniSquare.ttf"
             text: "Man vs Seagull"
             color: (0,0,0,1)
             font_size: 35
-            size_hint: 1,0.4
+            size_hint: 1,0.3
         BoxLayout:
             orientation: 'vertical'
-            size_hint: 1,0.6
+            size_hint: 1,0.5
             Button:
                 font_name: "./fonts/KenPixelMiniSquare.ttf"
                 pos_hint: {"right":0.9, "top":0.6}
@@ -490,24 +526,16 @@ Builder.load_string("""
     BoxLayout:
         orientation: 'vertical'
         Label:
+            size_hint: 0.8, 0.7
             color: (0,0,0,1)
             font_name: "./fonts/KenPixelMiniSquare.ttf"
             text: app.GAME_COPYRIGHT_TEXT
         Button:
             font_name: "./fonts/KenPixelMiniSquare.ttf"
-            size_hint: 1,0.2
+            size_hint: 0.9,0.2
             pos_hint: {"right":1, "top":0.3}
             text: "back"
             on_release: app.root.current="main_menu"
-
-<GameScreen>:
-    id: gamescreen
-    name: "game_screen"
-    on_enter: Clock.schedule_interval(gamescreen.update, 1.0/app.FRAMES_PER_SECOND)
-    on_leave: Clock.unschedule(gamescreen.update)
-    GUI:
-        id: mygui
-        font_name: "./fonts/KenPixelMiniSquare.ttf"
 
 """)
 
@@ -516,6 +544,9 @@ from kivy.base import EventLoop
 class TestApp(App):
 
     FRAMES_PER_SECOND = 60
+
+    CURRENT_HIGH_SCORE = 0
+    CURRENT_HIGH_SCORE_TEXT = "High Score : 0"
 
     GAME_COPYRIGHT_TEXT = "This is a mirage game.\n\
 All Rights reserved\n\n\n\
@@ -529,13 +560,18 @@ Feel free to contact me at hansum.rahul@gmail.com"
             return False
 
     def build(self):
+        self.CURRENT_HIGH_SCORE = 0
+        self.CURRENT_HIGH_SCORE_TEXT = ('High Score : %d' % self.CURRENT_HIGH_SCORE)
+
+        # Now bind keys
         EventLoop.window.bind(on_keyboard=self.hook_keyboard)
 
+        # Start with the screens
         self.sm = ScreenManager()
         self.sm.add_widget(MenuScreen(name='main_menu'))
         self.sm.add_widget(AboutScreen(name='about_screen'))
 
-        self.game_screen_widget = GameScreen(name='game_screen')
+        self.game_screen_widget = GameScreen(name='game_screen',app=self)
         self.sm.add_widget(self.game_screen_widget)
         return self.sm
 
