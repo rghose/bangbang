@@ -13,7 +13,7 @@ package.domain = org.mirage
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,gif,wav
+source.include_exts = py,png,jpg,kv,atlas,gif,wav,mp3,ttf
 
 # (list) Source files to exclude (let empty to not exclude anything)
 #source.exclude_exts = spec
@@ -25,7 +25,7 @@ source.include_exts = py,png,jpg,kv,atlas,gif,wav
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 0.1
+version = 0.2.1
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]
@@ -33,7 +33,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3,kivy
-requirements = kivy
+requirements = pil,sqlite3,kivy
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
