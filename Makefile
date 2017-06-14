@@ -1,2 +1,2 @@
 test:
-  true
+  @/bin/bash -c "echo Yes"
